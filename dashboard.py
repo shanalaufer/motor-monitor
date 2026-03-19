@@ -123,6 +123,6 @@ while run:
     with history_area.container():
         st.subheader("Health score history")
         history_df = pd.DataFrame({'Health score': st.session_state.history})
-        st.line_chart(history_df, height=150)
+        st.line_chart(history_df)
 
     time.sleep(refresh_rate)
