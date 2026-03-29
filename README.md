@@ -15,7 +15,7 @@ This is the same concept used in industrial predictive maintenance systems at ma
 
 ## Live demo
 
-👉 [Open the live dashboard](YOUR_STREAMLIT_URL_HERE)
+👉 [Open the live dashboard](https://motor-monitor-gtmdausuctqgflvd5xteux.streamlit.app/)
 
 Use the sidebar to switch between healthy and faulty motor modes and watch the FFT, health score, and status banner update in real time.
 
