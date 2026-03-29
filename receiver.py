@@ -10,6 +10,7 @@ fs = 1000
 
 def extract_features(signal):
     signal = np.array(signal)
+    signal = signal - np.mean(signal)  # remove DC offset / gravity
     rms = np.sqrt(np.mean(signal**2))
     peak = np.max(np.abs(signal))
     crest_factor = peak / rms
