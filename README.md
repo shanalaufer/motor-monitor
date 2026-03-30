@@ -58,6 +58,29 @@ A Random Forest classifier (100 trees) was trained on 1000 labeled samples — 5
 Bearing faults create sharp impact spikes in the vibration signal. Crest factor (peak ÷ RMS) is sensitive to these spikes — a healthy motor has a crest factor around 1.4, while an impact-type fault can push it above 3.0. This is a standard diagnostic metric in industrial vibration analysis.
 
 ---
+## Hardware integration
+
+The system runs on an ESP32-WROOM microcontroller connected to an MPU-6050 MEMS accelerometer over I2C. The ESP32 samples vibration at 500Hz and streams data over WiFi to the Python pipeline in real time.
+
+**Hardware stack:**
+- ESP32-WROOM — microcontroller running MicroPython, handles I2C and WiFi
+- MPU-6050 — 3-axis MEMS accelerometer, mounted directly on motor body
+- L298N — motor driver module, controls DC motor speed and direction
+- Small DC hobby motor — test subject for vibration analysis
+
+**What I learned from real hardware:**
+
+The sim-to-real gap is real. The simulation-trained model performed reasonably on real data but highlighted two key challenges:
+
+1. **Gravity offset** — the accelerometer measures 1g of gravity as a DC offset that needed to be removed before feature extraction using mean subtraction
+2. **Fault signature differences** — simulated bearing faults (clean 120Hz sine wave) don't perfectly match real imbalance faults, which show up more in crest factor than in fault frequency energy
+
+Next step: collect a clean labeled dataset from the real motor with consistent sensor mounting and retrain on real data.
+```
+
+Save it. Then commit everything in GitHub Desktop:
+```
+Add hardware integration — ESP32 + MPU-6050 streaming real data, document sim-to-real gap
 
 ## Tech stack
 

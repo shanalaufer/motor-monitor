@@ -1,3 +1,4 @@
+import csv
 import socket
 import json
 import numpy as np
@@ -48,7 +49,7 @@ while True:
         except:
             pass
         conn.close()
-        
+        current_label = 1
         if data:
             payload = json.loads(data.decode())
             samples = payload['samples']
@@ -59,5 +60,16 @@ while True:
             health_score = round((1 - probability) * 100, 1)
             status = "HEALTHY" if prediction == 0 else "FAULT DETECTED"
             print(f"Status: {status} | Health: {health_score}% | RMS: {features['rms']:.3f} | E120Hz: {features['energy_120hz']:.3f}")
+            # Save to CSV
+        with open('real_data.csv', 'a', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                features['rms'],
+                features['peak'],
+                features['crest_factor'],
+                features['energy_50hz'],
+                features['energy_120hz'],
+                current_label
+            ])
     except Exception as e:
         print('Error:', e)
