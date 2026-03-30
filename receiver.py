@@ -26,7 +26,8 @@ def extract_features(signal):
         'peak': peak,
         'crest_factor': crest_factor,
         'energy_50hz': energy_at(50),
-        'energy_120hz': energy_at(120),
+        'energy_100hz': energy_at(100),
+        'energy_150hz': energy_at(150),
     }
 
 server = socket.socket()
@@ -59,7 +60,7 @@ while True:
             probability = model.predict_proba(features_df)[0][1]
             health_score = round((1 - probability) * 100, 1)
             status = "HEALTHY" if prediction == 0 else "FAULT DETECTED"
-            print(f"Status: {status} | Health: {health_score}% | RMS: {features['rms']:.3f} | E120Hz: {features['energy_120hz']:.3f}")
+            print(f"Status: {status} | Health: {health_score}% | RMS: {features['rms']:.3f} | E100Hz: {features['energy_100hz']:.3f}")
             # Save to CSV
         with open('real_data.csv', 'a', newline='') as f:
             writer = csv.writer(f)
@@ -68,7 +69,8 @@ while True:
                 features['peak'],
                 features['crest_factor'],
                 features['energy_50hz'],
-                features['energy_120hz'],
+                features['energy_100hz'],
+                features['energy_150hz'],
                 current_label
             ])
     except Exception as e:

@@ -11,8 +11,15 @@ def generate_signal(fault=False, fault_amplitude=0.6):
     noise = np.random.normal(0, 0.3, len(t))
     signal = normal + noise
     if fault:
-        bearing_fault = fault_amplitude * np.sin(2 * np.pi * 120 * t)
-        signal = signal + bearing_fault
+        # Imbalance creates energy at harmonics of rotation frequency
+        # plus random impacts (high crest factor)
+        harmonic2 = fault_amplitude * np.sin(2 * np.pi * 100 * t)  # 2x rotation
+        harmonic3 = (fault_amplitude * 0.5) * np.sin(2 * np.pi * 150 * t)  # 3x rotation
+        # Add random impacts to raise crest factor
+        impacts = np.zeros(len(t))
+        impact_times = np.random.choice(len(t), size=20, replace=False)
+        impacts[impact_times] = fault_amplitude * 3
+        signal = signal + harmonic2 + harmonic3 + impacts
     return signal
 
 def extract_features(signal):
@@ -34,14 +41,16 @@ def extract_features(signal):
         return np.sum(yf[mask])
 
     energy_50hz  = energy_at(50)
-    energy_120hz = energy_at(120)
+    energy_100hz = energy_at(100)
+    energy_150hz = energy_at(150)
 
     return {
         'rms': rms,
         'peak': peak,
         'crest_factor': crest_factor,
         'energy_50hz': energy_50hz,
-        'energy_120hz': energy_120hz,
+        'energy_100hz': energy_100hz,
+        'energy_150hz': energy_150hz,
     }
 
 # Generate dataset
