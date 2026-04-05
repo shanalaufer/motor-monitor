@@ -82,6 +82,16 @@ Save it. Then commit everything in GitHub Desktop:
 ```
 Add hardware integration — ESP32 + MPU-6050 streaming real data, document sim-to-real gap
 
+## Results on real hardware
+
+**Healthy motor:** 95-100% health score consistently with sensor mounted on motor body
+
+**Fault detection:** Physical imbalance (asymmetric mass on shaft) successfully detected — system flagged FAULT DETECTED with health score dropping significantly
+
+**Key finding — sim-to-real gap:** Original model trained on simulated 120Hz bearing fault signal did not generalize to real imbalance faults. Real imbalance creates energy at harmonics of rotation frequency (100Hz, 150Hz) and elevated crest factor — not a clean 120Hz signal. Model was retrained with updated imbalance simulation and successfully detected real physical faults.
+
+**Lesson:** The gap between simulation and real sensor data is a genuine engineering challenge. Gravity offset removal, consistent sensor mounting, and fault-type-specific feature engineering were all required to bridge it.
+
 ## Tech stack
 
 | Layer | Technology |
