@@ -40,16 +40,17 @@ Live dashboard (Streamlit) — health score, signal plots, alerts
 
 ## Key results
 
-- 100% accuracy on test set (200 samples) — zero missed faults, zero false alarms
-- Fault detection latency: < 2 seconds from signal to dashboard alert
-- Feature importance: RMS vibration (40%), energy at fault frequency (37%)
+- 100% accuracy on real motor data (105 samples) — zero missed faults, zero false alarms
+- Health score drops from 95-100% to 0-43% when physical imbalance is introduced
+- Model retrained on real sensor data — crest factor (31%) and RMS (30%) are top features
+- Fault detection latency: < 2 seconds from sensor to alert
 
 ---
 
 ## How it works
 
 **Signal processing:**
-Motor vibration is sampled at 1000Hz. The FFT decomposes the raw signal into frequency components — a healthy motor shows one dominant peak at its rotation frequency (50Hz). A bearing fault creates a characteristic peak at a calculable fault frequency (120Hz in this system). Five features are extracted from each signal window: RMS amplitude, peak value, crest factor, and energy at 50Hz and 120Hz.
+Motor vibration is sampled at 1000Hz. The FFT decomposes the raw signal into frequency components — a healthy motor shows one dominant peak at its rotation frequency (50Hz). Motor imbalance creates energy at harmonics of the rotation frequency (100Hz, 150Hz) and elevated crest factor — detected by the ML model in real time. Five features are extracted from each signal window: RMS amplitude, peak value, crest factor, and energy at 50Hz and 120Hz.
 
 **Machine learning:**
 A Random Forest classifier (100 trees) was trained on 1000 labeled samples — 500 healthy, 500 faulty — with an 80/20 train/test split. The model outputs a fault probability which is converted to a 0-100% health score. The model was chosen for its interpretability and robustness on small tabular datasets.
@@ -75,12 +76,8 @@ The sim-to-real gap is real. The simulation-trained model performed reasonably o
 1. **Gravity offset** — the accelerometer measures 1g of gravity as a DC offset that needed to be removed before feature extraction using mean subtraction
 2. **Fault signature differences** — simulated bearing faults (clean 120Hz sine wave) don't perfectly match real imbalance faults, which show up more in crest factor than in fault frequency energy
 
-Next step: collect a clean labeled dataset from the real motor with consistent sensor mounting and retrain on real data.
-```
+**Update:** Real labeled data was collected from the physical motor — 66 healthy samples and 57 faulty samples (imbalance created by asymmetric mass on shaft). Model retrained on real data achieved 100% accuracy with crest factor as the most important feature.
 
-Save it. Then commit everything in GitHub Desktop:
-```
-Add hardware integration — ESP32 + MPU-6050 streaming real data, document sim-to-real gap
 
 ## Results on real hardware
 
@@ -111,13 +108,14 @@ Add hardware integration — ESP32 + MPU-6050 streaming real data, document sim-
 motor-monitor/
 ├── signal_sim.py          # Signal simulation and FFT visualization
 ├── generate_dataset.py    # Dataset generation (1000 labeled samples)
-├── train_model.py         # Model training and evaluation
+├── train_model.py         # Model training and evaluation (simulation)
+├── train_real.py          # Retrain on real motor data
+├── receiver.py            # Receives ESP32 data, runs ML model
 ├── dashboard.py           # Live Streamlit dashboard
 ├── motor_dataset.csv      # Generated training dataset
+├── real_data.csv          # Real motor sensor data (labeled)
 ├── motor_model.pkl        # Trained Random Forest model
 └── requirements.txt       # Python dependencies
-```
-
 ---
 
 ## What's next
