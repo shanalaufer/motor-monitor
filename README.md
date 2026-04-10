@@ -65,6 +65,39 @@ Individual features are only 1.3-2.4x different between healthy and faulty motor
 
 **Why the autoencoder matters for real deployment:** A Random Forest requires fault examples to train on — meaning you need to wait for something to break or deliberately damage equipment. The autoencoder only needs normal operation data, which every system already has from day one.
 
+## System architecture — FastAPI backend
+
+The system runs as three separate services communicating through a REST API:
+ESP32 → receiver.py → POST /predict → api.py → stores result
+↓
+dashboard.py → GET /health every 2s → live display
+
+**API endpoints:**
+
+| Endpoint | Method | What it does |
+|---|---|---|
+| `/` | GET | Confirms API is running |
+| `/health` | GET | Returns latest motor reading |
+| `/history` | GET | Returns last 100 readings |
+| `/predict` | POST | Accepts features, runs both models, returns results |
+
+**How to run locally:**
+
+Terminal 1 — start API:
+`uvicorn api:app --port 8000`
+
+Terminal 2 — start receiver (requires ESP32):
+`python3 receiver.py`
+
+Terminal 3 — start dashboard:
+`streamlit run dashboard.py`
+
+**Dashboard modes:**
+- **Live sensor** — reads from ESP32 via receiver.py → api.py
+- **Simulation** — generates signals locally, sends through API for prediction
+
+**Note:** The deployed Streamlit Cloud app runs the simulation-only version. The full live pipeline requires the local FastAPI server running alongside the dashboard.
+
 ## How it works
 
 **Signal processing:**

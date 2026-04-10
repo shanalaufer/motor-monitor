@@ -5,13 +5,14 @@ import numpy as np
 from scipy.fft import fft, fftfreq
 import joblib
 import pandas as pd
+import requests
 
 model = joblib.load('motor_model.pkl')
 fs = 1000
 
 def extract_features(signal):
     signal = np.array(signal)
-    signal = signal - np.mean(signal)  # remove DC offset / gravity
+    signal = signal - np.mean(signal)
     rms = np.sqrt(np.mean(signal**2))
     peak = np.max(np.abs(signal))
     crest_factor = peak / rms
@@ -61,6 +62,14 @@ while True:
             health_score = round((1 - probability) * 100, 1)
             status = "HEALTHY" if prediction == 0 else "FAULT DETECTED"
             print(f"Status: {status} | Health: {health_score}% | RMS: {features['rms']:.3f} | E100Hz: {features['energy_100hz']:.3f}")
+
+            # Send to API
+            try:
+                requests.post('http://127.0.0.1:8000/predict', json={'features': features}, timeout=2)
+            except Exception as e:
+                print(f"API error: {e}")
+
+            # Uncomment to save data:
             # with open('real_data.csv', 'a', newline='') as f:
             #     writer = csv.writer(f)
             #     writer.writerow([
@@ -72,5 +81,6 @@ while True:
             #         features['energy_150hz'],
             #         current_label
             #     ])
+
     except Exception as e:
         print('Error:', e)
