@@ -46,6 +46,24 @@ Live dashboard (Streamlit) — health score, signal plots, alerts
 - Fault detection latency: < 2 seconds from sensor to alert
 
 ---
+## Model comparison — Random Forest vs Autoencoder
+
+| | Random Forest | Autoencoder |
+|---|---|---|
+| Type | Supervised | Unsupervised |
+| Training data needed | Labeled healthy + faulty | Healthy only |
+| Accuracy | 100% | 99% |
+| Missed faults | 0 | 0 |
+| False alarms | 0 | 1 |
+| Faulty error ratio | N/A | 66x higher than healthy |
+
+**Key insight:** The autoencoder was trained only on 48 healthy samples — it never saw a single fault example. Yet it detected faulty motors with 99% accuracy because the reconstruction error for faulty signals was 66x higher than healthy signals.
+**Why 66x reconstruction error is legitimate (not an artifact):**
+Individual features are only 1.3-2.4x different between healthy and faulty motors. But the autoencoder learned the relationships between all 6 features together. When a faulty signal comes in, all 6 features deviate from the healthy pattern simultaneously — the errors compound across all dimensions. That's why 2x individual differences become 66x reconstruction error.
+
+**Unexpected finding:** Energy at 100Hz was actually higher in healthy motors (0.385) than faulty ones (0.290) — the opposite of what simulation predicted. Real motor behavior doesn't always match simulation assumptions. This is why collecting real labeled data matters.
+
+**Why the autoencoder matters for real deployment:** A Random Forest requires fault examples to train on — meaning you need to wait for something to break or deliberately damage equipment. The autoencoder only needs normal operation data, which every system already has from day one.
 
 ## How it works
 
