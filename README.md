@@ -25,13 +25,13 @@ Use the sidebar to switch between healthy and faulty motor modes and watch the F
 ```
 Vibration sensor (MPU-6050)
         ↓
-Edge node (ESP32) — samples at 1000Hz over I2C
+Edge node (ESP32) — samples at 500Hz over I2C
         ↓
 Feature extraction — FFT, RMS, crest factor, fault frequency energy
         ↓
-ML model (Random Forest) — classifies healthy vs faulty
+REST API (FastAPI) — runs both ML models
         ↓
-REST API (FastAPI) — serves predictions
+Random Forest + Autoencoder — dual model inference
         ↓
 Live dashboard (Streamlit) — health score, signal plots, alerts
 ```
@@ -101,7 +101,7 @@ Terminal 3 — start dashboard:
 ## How it works
 
 **Signal processing:**
-Motor vibration is sampled at 1000Hz. The FFT decomposes the raw signal into frequency components — a healthy motor shows one dominant peak at its rotation frequency (50Hz). Motor imbalance creates energy at harmonics of the rotation frequency (100Hz, 150Hz) and elevated crest factor — detected by the ML model in real time. Five features are extracted from each signal window: RMS amplitude, peak value, crest factor, and energy at 50Hz and 120Hz.
+Motor vibration is sampled at 500 Hz. The FFT decomposes the raw signal into frequency components — a healthy motor shows one dominant peak at its rotation frequency (50Hz). Motor imbalance creates energy at harmonics of the rotation frequency (100Hz, 150Hz) and elevated crest factor — detected by the ML model in real time. Five features are extracted from each signal window: RMS amplitude, peak value, crest factor, and energy at 50Hz, 100Hz, and 150Hz.
 
 **Machine learning:**
 A Random Forest classifier (100 trees) was trained on 1000 labeled samples — 500 healthy, 500 faulty — with an 80/20 train/test split. The model outputs a fault probability which is converted to a 0-100% health score. The model was chosen for its interpretability and robustness on small tabular datasets.
@@ -146,6 +146,7 @@ The sim-to-real gap is real. The simulation-trained model performed reasonably o
 |---|---|
 | Signal processing | Python, NumPy, SciPy (FFT) |
 | Machine learning | scikit-learn (Random Forest) |
+| Deep learning | PyTorch (Autoencoder) |
 | Edge firmware | MicroPython on ESP32 |
 | Sensor | MPU-6050 accelerometer over I2C |
 | Backend API | FastAPI |
@@ -166,16 +167,44 @@ motor-monitor/
 ├── motor_dataset.csv      # Generated training dataset
 ├── real_data.csv          # Real motor sensor data (labeled)
 ├── motor_model.pkl        # Trained Random Forest model
+├── autoencoder.py          # PyTorch autoencoder training
+├── api.py                  # FastAPI backend
+├── autoencoder.pth         # Trained autoencoder weights
+├── scaler.pkl              # Feature scaler for autoencoder
 └── requirements.txt       # Python dependencies
+```
 ---
 
-## What's next
+## Project roadmap
 
-- [ ] Custom PCB design in KiCad — replacing breadboard with designed hardware
-- [ ] Deep learning upgrade — PyTorch autoencoder for unsupervised fault detection
-- [ ] Multiple fault types — bearing defect, imbalance, misalignment
-- [ ] FPGA acceleration — Verilog FFT implementation for microsecond latency
-- [ ] LLM interface — natural language queries via Anthropic API
+### Phase 1 — Proven prototype (complete)
+- Signal simulation and FFT feature extraction
+- Random Forest classifier — 100% accuracy on simulated data
+- Streamlit dashboard deployed publicly
+- ESP32 + MPU-6050 hardware integration
+- Real data collection and model retraining on physical motor
+- PyTorch autoencoder — 99% accuracy, unsupervised anomaly detection
+- FastAPI REST backend — dual model inference pipeline
+
+### Phase 2 — Better signal pipeline (in progress)
+- Hardware validation — test live dashboard with ESP32
+- 3-axis raw data collection (X, Y, Z separately)
+- Butterworth bandpass filter + Welch PSD preprocessing
+- Retrain autoencoder on clean preprocessed data
+- KiCad custom PCB design (parallel with hardware steps)
+
+### Phase 3 — Product-like system (planned)
+- Deploy FastAPI to cloud (Railway or Render)
+- Update public Streamlit URL to use hosted API
+- Database backend for historical trend monitoring
+- Multi-node support — monitor multiple motors simultaneously
+
+### Phase 4 — Advanced engineering (future)
+- Multiple fault types — bearing defect, imbalance, misalignment
+- Multiclass classification
+- HDLBits Verilog practice
+- FPGA inference accelerator on Basys 3
+- LLM natural language interface via Anthropic API
 
 ---
 
