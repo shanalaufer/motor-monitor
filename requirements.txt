@@ -6,3 +6,6 @@ scikit-learn
 joblib
 streamlit==1.44.0
 altair==4.2.2
+fastapi
+uvicorn
+torch
