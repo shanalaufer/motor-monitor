@@ -120,6 +120,14 @@ The system runs on an ESP32-WROOM microcontroller connected to an MPU-6050 MEMS 
 - L298N — motor driver module, controls DC motor speed and direction
 - Small DC hobby motor — test subject for vibration analysis
 
+**PCB Design:**
+Custom PCB designed in KiCad to replace the breadboard prototype. The schematic includes all three main components (ESP32-WROOM-32E, MPU-6050, L298N) with proper decoupling capacitors and power distribution. KiCad design files are included in the `motor monitor pcb/` folder.
+
+![Schematic](schematic.png)
+
+**Signal conditioning:**
+A hardware RC anti-aliasing filter (R = 10kΩ, C = 68nF, fc = 234Hz) sits between the sensor output and the ESP32 ADC input. This prevents frequency aliasing by attenuating signals above the Nyquist frequency (250Hz at 500Hz sampling rate) before digitization — a problem that cannot be corrected in software after sampling. This complements the software Butterworth bandpass filter in the preprocessing pipeline. Two-stage filtering: hardware prevents aliasing, software removes noise.
+
 **What I learned from real hardware:**
 
 The sim-to-real gap is real. The simulation-trained model performed reasonably on real data but highlighted two key challenges:
