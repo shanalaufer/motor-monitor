@@ -2,6 +2,7 @@
 ### AI-powered predictive maintenance system for electric motors
 
 [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://motor-monitor-gtmdausuctqgflvd5xteux.streamlit.app/)
+👉 [API docs (Swagger UI)](https://motor-fault-api-f7r8.onrender.com/docs)
 
 ---
 
@@ -29,11 +30,11 @@ Edge node (ESP32) — samples at 500Hz over I2C
         ↓
 Feature extraction — FFT, RMS, crest factor, fault frequency energy
         ↓
-REST API (FastAPI) — runs both ML models
+REST API (FastAPI) — hosted on Render
         ↓
 Random Forest + Autoencoder — dual model inference
         ↓
-Live dashboard (Streamlit) — health score, signal plots, alerts
+Live dashboard (Streamlit Cloud) — health score, signal plots, alerts
 ```
 
 ---
@@ -98,7 +99,6 @@ Terminal 3 — start dashboard:
 - **Live sensor** — reads from ESP32 via receiver.py → api.py
 - **Simulation** — generates signals locally, sends through API for prediction
 
-**Note:** The deployed Streamlit Cloud app runs the simulation-only version. The full live pipeline requires the local FastAPI server running alongside the dashboard.
 
 ## How it works
 
@@ -161,7 +161,7 @@ The sim-to-real gap is real. The simulation-trained model performed reasonably o
 | Sensor | MPU-6050 accelerometer over I2C |
 | Backend API | FastAPI |
 | Dashboard | Streamlit |
-| Deployment | Streamlit Cloud |
+| Deployment | Streamlit Cloud + Render |
 
 ---
 
@@ -204,8 +204,8 @@ motor-monitor/
 - KiCad custom PCB design (parallel with hardware steps)
 
 ### Phase 3 — Product-like system (planned)
-- Deploy FastAPI to cloud (Railway or Render)
-- Update public Streamlit URL to use hosted API
+- ✅ Deploy FastAPI to cloud (Railway or Render)
+- ✅ Update public Streamlit URL to use hosted API
 - Database backend for historical trend monitoring
 - Multi-node support — monitor multiple motors simultaneously
 
