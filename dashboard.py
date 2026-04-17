@@ -6,7 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.fft import fft, fftfreq
 
-API_URL = "http://127.0.0.1:8000"
+API_URL = st.secrets.get("API_URL", "http://127.0.0.1:8000")
 
 st.set_page_config(page_title="Motor Monitor", page_icon="⚙", layout="wide")
 st.title("Motor Health Monitor")
