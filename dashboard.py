@@ -77,8 +77,13 @@ def post_simulated_to_api(features):
     return None
 
 col1, col2, col3, col4 = st.columns(4)
+metric1 = col1.empty()
+metric2 = col2.empty()
+metric3 = col3.empty()
+metric4 = col4.empty()
 status_box = st.empty()
 plot_area = st.empty()
+feed_area = st.empty()
 col_hist1, col_hist2 = st.columns(2)
 rf_history_area = col_hist1.empty()
 ae_history_area = col_hist2.empty()
@@ -87,6 +92,8 @@ if 'rf_history' not in st.session_state:
     st.session_state.rf_history = []
 if 'ae_history' not in st.session_state:
     st.session_state.ae_history = []
+if 'feed_history' not in st.session_state:
+    st.session_state.feed_history = []
 if 'sim_mode' not in st.session_state:
     st.session_state.sim_mode = "Healthy"
 
@@ -134,6 +141,15 @@ while run:
         st.session_state.rf_history.pop(0)
         st.session_state.ae_history.pop(0)
 
+    st.session_state.feed_history.append({
+        'time': time.strftime('%H:%M:%S'),
+        'rf': reading['rf_health'],
+        'ae': reading['ae_health'],
+        'status': reading['rf_status'],
+    })
+    if len(st.session_state.feed_history) > 50:
+        st.session_state.feed_history.pop(0)
+
     rf_fault = reading['rf_status'] == "FAULT DETECTED"
     ae_fault = reading['ae_status'] == "FAULT DETECTED"
 
@@ -142,14 +158,10 @@ while run:
     else:
         status_box.success(f"✓ HEALTHY | RF: {reading['rf_health']}% | AE: {reading['ae_health']}%")
 
-    with col1:
-        st.metric("RF health", f"{reading['rf_health']}%")
-    with col2:
-        st.metric("AE health", f"{reading['ae_health']}%")
-    with col3:
-        st.metric("Recon error", f"{reading['recon_error']:.4f}")
-    with col4:
-        st.metric("RMS", f"{reading['rms']:.3f}")
+    metric1.metric("RF health", f"{reading['rf_health']}%")
+    metric2.metric("AE health", f"{reading['ae_health']}%")
+    metric3.metric("Recon error", f"{reading['recon_error']:.4f}")
+    metric4.metric("RMS", f"{reading['rms']:.3f}")
 
     with plot_area.container():
         if signal is not None:
@@ -177,6 +189,17 @@ while run:
             plt.close()
         else:
             st.info("Signal plot available in simulation mode. Live mode shows features only.")
+
+    with feed_area.container():
+        st.subheader("Live readings")
+        feed = list(reversed(st.session_state.feed_history))
+        feed_df = pd.DataFrame({
+            'Time': [r['time'] for r in feed],
+            'RF health': [f"{r['rf']}%" for r in feed],
+            'AE health': [f"{r['ae']}%" for r in feed],
+            'Status': [r['status'] for r in feed],
+        })
+        st.dataframe(feed_df, hide_index=True, height=200)
 
     with rf_history_area.container():
         st.subheader("RF health history")

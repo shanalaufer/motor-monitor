@@ -55,7 +55,7 @@ while True:
         
         s = socket.socket()
         s.settimeout(5)
-        addr = socket.getaddrinfo('192.168.1.22', 5001)[0][-1]
+        addr = socket.getaddrinfo('MacBook-Pro.local', 5001)[0][-1]
         s.connect(addr)
         
         # Send in chunks
