@@ -17,17 +17,22 @@ i2c.writeto_mem(104, 0x19, b'\x00')
 def read_accel():
     raw = i2c.readfrom_mem(104, 0x3B, 6)
     x, y, z = struct.unpack('>3h', raw)
-    return z / 16384.0  # use Z axis, convert to g
+    return x / 16384.0, y / 16384.0, z / 16384.0
 
-def collect_samples(n=500):
-    samples = []
+def collect_samples(n=256):
+    samples_x, samples_y, samples_z = [], [], []
     for _ in range(n):
         try:
-            samples.append(read_accel())
+            x, y, z = read_accel()
+            samples_x.append(x)
+            samples_y.append(y)
+            samples_z.append(z)
         except:
-            samples.append(0.0)
-        time.sleep_us(2000)  # 2ms = 500Hz instead of 1000Hz
-    return samples
+            samples_x.append(0.0)
+            samples_y.append(0.0)
+            samples_z.append(0.0)
+        time.sleep_us(2000)
+    return samples_x, samples_y, samples_z
 
 # WiFi connection
 sta = network.WLAN(network.STA_IF)
@@ -50,9 +55,14 @@ print('Motor spinning!')
 # Main loop
 while True:
     try:
-        samples = collect_samples(500)
-        data = json.dumps({'samples': samples})
-        
+        samples_x, samples_y, samples_z = collect_samples(256)
+        payload = {
+            'samples_x': samples_x,
+            'samples_y': samples_y,
+            'samples_z': samples_z,
+            'pwm_duty': 1023
+        }
+        data = json.dumps(payload)
         s = socket.socket()
         s.settimeout(5)
         addr = socket.getaddrinfo('MacBook-Pro.local', 5001)[0][-1]
@@ -62,7 +72,7 @@ while True:
         encoded = data.encode()
         s.sendall(encoded)
         s.close()
-        print('Sent', len(samples), 'samples')
+        print('Sent', len(samples_x), 'samples per axis')
         
     except Exception as e:
         print('Error:', e)
