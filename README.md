@@ -44,6 +44,7 @@ Live dashboard (Streamlit) — health score, signal plots, alerts
 - Health score drops from 95-100% to 0-43% when physical imbalance is introduced
 - Model retrained on real sensor data — crest factor (31%) and RMS (30%) are top features
 - Fault detection latency: < 2 seconds from sensor to alert
+- PyTorch autoencoder retrained on 106 healthy samples — 96% accuracy, 36.9x reconstruction error ratio, threshold 1.0260
 
 ---
 ## Model comparison — Random Forest vs Autoencoder
@@ -55,11 +56,12 @@ Live dashboard (Streamlit) — health score, signal plots, alerts
 | Accuracy | 100% | 99% |
 | Missed faults | 0 | 0 |
 | False alarms | 0 | 1 |
-| Faulty error ratio | N/A | 66x higher than healthy |
+| Faulty error ratio | N/A | 36.9x higher than healthy |
 
-**Key insight:** The autoencoder was trained only on 48 healthy samples — it never saw a single fault example. Yet it detected faulty motors with 99% accuracy because the reconstruction error for faulty signals was 66x higher than healthy signals.
-**Why 66x reconstruction error is legitimate (not an artifact):**
-Individual features are only 1.3-2.4x different between healthy and faulty motors. But the autoencoder learned the relationships between all 6 features together. When a faulty signal comes in, all 6 features deviate from the healthy pattern simultaneously — the errors compound across all dimensions. That's why 2x individual differences become 66x reconstruction error.
+**Key insight:** The autoencoder was trained only on healthy samples — it never saw a single fault example. Yet it detected faulty motors with high accuracy because the reconstruction error for faulty signals was significantly higher than healthy signals.
+
+**Reconstruction error ratio after retraining:**
+After collecting more healthy data (48 → 106 samples) and retraining, the ratio dropped from 66x to 36.9x — but the system became significantly more reliable on the live motor. Healthy reconstruction error dropped from 0.53 to 0.18, meaning the model learned a tighter, more accurate definition of normal. The tradeoff between sensitivity and false alarm rate is a core challenge in anomaly detection — more healthy data improved real-world reliability at the cost of a slight reduction in the error ratio.
 
 **Unexpected finding:** Energy at 100Hz was actually higher in healthy motors (0.385) than faulty ones (0.290) — the opposite of what simulation predicted. Real motor behavior doesn't always match simulation assumptions. This is why collecting real labeled data matters.
 
