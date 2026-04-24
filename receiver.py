@@ -9,7 +9,7 @@ import joblib
 import pandas as pd
 import requests
 
-LABEL = "faulty"  # "healthy" or "faulty"
+LABEL = "healthy"  # "healthy" or "faulty"
 API_URL = "https://motor-fault-api-f7r8.onrender.com"
 
 model = joblib.load('motor_model.pkl')
@@ -93,29 +93,29 @@ while True:
 
             threading.Thread(target=_post_to_api, args=(features,), daemon=True).start()
 
-            csv_path = 'real_data_v2.csv'
-            write_header = not os.path.exists(csv_path)
-            with open(csv_path, 'a', newline='') as f:
-                writer = csv.writer(f)
-                if write_header:
-                    writer.writerow(['rms', 'peak', 'crest_factor', 'energy_50hz', 'energy_100hz', 'energy_150hz', 'label'])
-                writer.writerow([
-                    features['rms'],
-                    features['peak'],
-                    features['crest_factor'],
-                    features['energy_50hz'],
-                    features['energy_100hz'],
-                    features['energy_150hz'],
-                    current_label
-                ])
+            # csv_path = 'real_data_v2.csv'
+            # write_header = not os.path.exists(csv_path)
+            # with open(csv_path, 'a', newline='') as f:
+            #     writer = csv.writer(f)
+            #     if write_header:
+            #         writer.writerow(['rms', 'peak', 'crest_factor', 'energy_50hz', 'energy_100hz', 'energy_150hz', 'label'])
+            #     writer.writerow([
+            #         features['rms'],
+            #         features['peak'],
+            #         features['crest_factor'],
+            #         features['energy_50hz'],
+            #         features['energy_100hz'],
+            #         features['energy_150hz'],
+            #         current_label
+            #     ])
 
-            npy_path = 'raw_healthy.npy' if LABEL == 'healthy' else 'raw_faulty.npy'
-            burst = np.stack([samples_x, samples_y, samples_z])  # shape (3, N)
-            if os.path.exists(npy_path):
-                existing = np.load(npy_path)
-                np.save(npy_path, np.concatenate([existing, burst[np.newaxis]], axis=0))
-            else:
-                np.save(npy_path, burst[np.newaxis])  # shape (1, 3, N)
+            # npy_path = 'raw_healthy.npy' if LABEL == 'healthy' else 'raw_faulty.npy'
+            # burst = np.stack([samples_x, samples_y, samples_z])  # shape (3, N)
+            # if os.path.exists(npy_path):
+            #     existing = np.load(npy_path)
+            #     np.save(npy_path, np.concatenate([existing, burst[np.newaxis]], axis=0))
+            # else:
+            #     np.save(npy_path, burst[np.newaxis])  # shape (1, 3, N)
 
             burst_count += 1
             print(f"Saved burst {burst_count} ({LABEL})")

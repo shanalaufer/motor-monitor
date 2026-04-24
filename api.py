@@ -19,9 +19,9 @@ app.add_middleware(
 )
 
 # Load models
-rf_model = joblib.load('motor_model.pkl')
-scaler = joblib.load('scaler.pkl')
-threshold = joblib.load('autoencoder_threshold.pkl')
+rf_model = joblib.load('motor_model_v2.pkl')
+scaler = joblib.load('scaler_v2.pkl')
+threshold = joblib.load('autoencoder_threshold_v2.pkl')
 
 class Autoencoder(nn.Module):
     def __init__(self, input_dim=6, bottleneck=3):
@@ -41,7 +41,7 @@ class Autoencoder(nn.Module):
         return self.decoder(self.encoder(x))
 
 autoencoder = Autoencoder()
-autoencoder.load_state_dict(torch.load('autoencoder.pth', weights_only=True))
+autoencoder.load_state_dict(torch.load('autoencoder_v2.pth', weights_only=True))
 autoencoder.eval()
 
 # In-memory storage for latest reading and history
