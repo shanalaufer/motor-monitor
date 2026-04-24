@@ -1,2 +1,2 @@
 import wifi
-wifi.connect_wifi('L231 WiFi', '9175970278')
+wifi.connect_wifi('LAUFERHOME', '0585950858')
