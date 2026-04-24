@@ -41,11 +41,12 @@ Live dashboard (Streamlit Cloud) — health score, signal plots, alerts
 
 ## Key results
 
-- 100% accuracy on real motor data (105 samples) — zero missed faults, zero false alarms
-- Health score drops from 95-100% to 0-43% when physical imbalance is introduced
-- Model retrained on real sensor data — crest factor (31%) and RMS (30%) are top features
-- Fault detection latency: < 2 seconds from sensor to alert
-- PyTorch autoencoder retrained on 106 healthy samples — 96% accuracy, 36.9x reconstruction error ratio, threshold 1.0260
+- 96.7% accuracy (RF) and 90.0% accuracy (AE) on 297 real motor samples
+- Health score drops from 95-100% to 0-43% when physical imbalance introduced
+- Top features: crest_factor (31%), RMS (30%)
+- Fault detection latency: <2 seconds from sensor to alert
+- Autoencoder trained on healthy samples only — detects faults via reconstruction error
+- 3-axis preprocessing: Butterworth bandpass (10-200Hz) + Welch PSD axis selection
 
 ---
 ## Model comparison — Random Forest vs Autoencoder
@@ -54,14 +55,14 @@ Live dashboard (Streamlit Cloud) — health score, signal plots, alerts
 |---|---|---|
 | Type | Supervised | Unsupervised |
 | Training data needed | Labeled healthy + faulty | Healthy only |
-| Accuracy | 100% | 99% |
+| Accuracy | 96.7% | 90.0% |
 | Missed faults | 0 | 0 |
 | False alarms | 0 | 1 |
 | Faulty error ratio | N/A | 36.9x higher than healthy |
 
 **Key insight:** The autoencoder was trained only on healthy samples — it never saw a single fault example. Yet it detected faulty motors with high accuracy because the reconstruction error for faulty signals was significantly higher than healthy signals.
 
-**Reconstruction error ratio after retraining:**
+**Reconstruction error ratio after retraining (v1 model — historical):**
 After collecting more healthy data (48 → 106 samples) and retraining, the ratio dropped from 66x to 36.9x — but the system became significantly more reliable on the live motor. Healthy reconstruction error dropped from 0.53 to 0.18, meaning the model learned a tighter, more accurate definition of normal. The tradeoff between sensitivity and false alarm rate is a core challenge in anomaly detection — more healthy data improved real-world reliability at the cost of a slight reduction in the error ratio.
 
 **Unexpected finding:** Energy at 100Hz was actually higher in healthy motors (0.385) than faulty ones (0.290) — the opposite of what simulation predicted. Real motor behavior doesn't always match simulation assumptions. This is why collecting real labeled data matters.
@@ -103,7 +104,7 @@ Terminal 3 — start dashboard:
 ## How it works
 
 **Signal processing:**
-Motor vibration is sampled at 500 Hz. The FFT decomposes the raw signal into frequency components — a healthy motor shows one dominant peak at its rotation frequency (50Hz). Motor imbalance creates energy at harmonics of the rotation frequency (100Hz, 150Hz) and elevated crest factor — detected by the ML model in real time. Five features are extracted from each signal window: RMS amplitude, peak value, crest factor, and energy at 50Hz, 100Hz, and 150Hz.
+Motor vibration is sampled at 500Hz across all 3 axes (X, Y, Z), preprocessed with DC offset removal, a Butterworth bandpass filter (10-200Hz), and Welch PSD axis selection. The FFT decomposes the raw signal into frequency components — a healthy motor shows one dominant peak at its rotation frequency (50Hz). Motor imbalance creates energy at harmonics of the rotation frequency (100Hz, 150Hz) and elevated crest factor — detected by the ML model in real time. Five features are extracted from each signal window: RMS amplitude, peak value, crest factor, and energy at 50Hz, 100Hz, and 150Hz.
 
 **Machine learning:**
 A Random Forest classifier (100 trees) was trained on 1000 labeled samples — 500 healthy, 500 faulty — with an 80/20 train/test split. The model outputs a fault probability which is converted to a 0-100% health score. The model was chosen for its interpretability and robustness on small tabular datasets.
@@ -172,16 +173,22 @@ motor-monitor/
 ├── generate_dataset.py    # Dataset generation (1000 labeled samples)
 ├── train_model.py         # Model training and evaluation (simulation)
 ├── train_real.py          # Retrain on real motor data
+├── train_v2.py            # Retrain on preprocessed 3-axis data
 ├── receiver.py            # Receives ESP32 data, runs ML model
 ├── dashboard.py           # Live Streamlit dashboard
+├── preprocessor.py        # 3-axis preprocessing pipeline
+├── autoencoder.py         # PyTorch autoencoder training
+├── api.py                 # FastAPI backend
 ├── motor_dataset.csv      # Generated training dataset
 ├── real_data.csv          # Real motor sensor data (labeled)
+├── real_data_v2.csv       # 297 samples (202 healthy + 95 faulty)
+├── raw_healthy.npy        # Raw 3-axis healthy bursts
+├── raw_faulty.npy         # Raw 3-axis faulty bursts
 ├── motor_model.pkl        # Trained Random Forest model
-├── autoencoder.py          # PyTorch autoencoder training
-├── api.py                  # FastAPI backend
-├── autoencoder.pth         # Trained autoencoder weights
-├── scaler.pkl              # Feature scaler for autoencoder
+├── autoencoder.pth        # Trained autoencoder weights
+├── scaler.pkl             # Feature scaler for autoencoder
 └── requirements.txt       # Python dependencies
+
 ```
 ---
 
@@ -196,12 +203,12 @@ motor-monitor/
 - PyTorch autoencoder — 99% accuracy, unsupervised anomaly detection
 - FastAPI REST backend — dual model inference pipeline
 
-### Phase 2 — Better signal pipeline (in progress)
-- Hardware validation — test live dashboard with ESP32
-- 3-axis raw data collection (X, Y, Z separately)
-- Butterworth bandpass filter + Welch PSD preprocessing
-- Retrain autoencoder on clean preprocessed data
-- KiCad custom PCB design (parallel with hardware steps)
+### Phase 2 — Better signal pipeline (complete)
+- ✅ Hardware validation — test live dashboard with ESP32
+- ✅ 3-axis raw data collection (202 healthy + 95 faulty)
+- ✅ Butterworth bandpass filter + Welch PSD preprocessing
+- ✅ Retrained RF (96.7%) and AE (90.0%) on clean preprocessed data
+- KiCad custom PCB design (in progress)
 
 ### Phase 3 — Product-like system (planned)
 - ✅ Deploy FastAPI to cloud (Railway or Render)

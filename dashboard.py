@@ -145,18 +145,20 @@ while run:
         'time': time.strftime('%H:%M:%S'),
         'rf': reading['rf_health'],
         'ae': reading['ae_health'],
-        'status': reading['rf_status'],
+        'status': overall_status,
     })
     if len(st.session_state.feed_history) > 50:
         st.session_state.feed_history.pop(0)
 
     rf_fault = reading['rf_status'] == "FAULT DETECTED"
     ae_fault = reading['ae_status'] == "FAULT DETECTED"
+    both_healthy = not rf_fault and not ae_fault
+    overall_status = "HEALTHY" if both_healthy else "FAULT DETECTED"
 
-    if rf_fault or ae_fault:
-        status_box.error(f"⚠ FAULT DETECTED | RF: {reading['rf_health']}% | AE: {reading['ae_health']}%")
-    else:
+    if both_healthy:
         status_box.success(f"✓ HEALTHY | RF: {reading['rf_health']}% | AE: {reading['ae_health']}%")
+    else:
+        status_box.error(f"⚠ FAULT DETECTED | RF: {reading['rf_health']}% | AE: {reading['ae_health']}%")
 
     metric1.metric("RF health", f"{reading['rf_health']}%")
     metric2.metric("AE health", f"{reading['ae_health']}%")
@@ -166,7 +168,7 @@ while run:
     with plot_area.container():
         if signal is not None:
             fig, axes = plt.subplots(1, 2, figsize=(12, 3))
-            color = 'crimson' if rf_fault else 'steelblue'
+            color = 'crimson' if not both_healthy else 'steelblue'
 
             axes[0].plot(t[:300], signal[:300], color=color, linewidth=0.8)
             axes[0].set_title('Vibration signal (time domain)')
