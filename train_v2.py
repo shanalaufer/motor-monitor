@@ -92,7 +92,7 @@ with torch.no_grad():
     recon = ae(healthy_tensor)
     errors = ((recon - healthy_tensor) ** 2).mean(dim=1).numpy()
 
-threshold = float(errors.mean() + 2 * errors.std())
+threshold = float(errors.mean() + 3 * errors.std())
 print(f"\nAE threshold (mean + 2*std on healthy train): {threshold:.6f}")
 
 joblib.dump(threshold, 'autoencoder_threshold_v2.pkl')
