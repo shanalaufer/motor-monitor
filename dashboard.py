@@ -141,6 +141,7 @@ while run:
         st.session_state.rf_history.pop(0)
         st.session_state.ae_history.pop(0)
 
+    overall_status = "HEALTHY" if reading['rf_status'] == "HEALTHY" and reading['ae_status'] == "HEALTHY" else "FAULT DETECTED"
     st.session_state.feed_history.append({
         'time': time.strftime('%H:%M:%S'),
         'rf': reading['rf_health'],
