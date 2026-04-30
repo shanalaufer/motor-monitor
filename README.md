@@ -87,14 +87,11 @@ dashboard.py → GET /health every 2s → live display
 
 **How to run locally:**
 
-Terminal 1 — start API:
-`uvicorn api:app --port 8000`
+The API is deployed on Render at: https://motor-fault-api-f7r8.onrender.com
 
-Terminal 2 — start receiver (requires ESP32):
-`python3 receiver.py`
-
-Terminal 3 — start dashboard:
-`streamlit run dashboard.py`
+To run the system:
+- python3 receiver.py — streams ESP32 data to the hosted API
+- streamlit run dashboard.py — starts the local dashboard
 
 **Dashboard modes:**
 - **Live sensor** — reads from ESP32 via receiver.py → api.py
@@ -187,6 +184,10 @@ motor-monitor/
 ├── motor_model.pkl        # Trained Random Forest model
 ├── autoencoder.pth        # Trained autoencoder weights
 ├── scaler.pkl             # Feature scaler for autoencoder
+├── motor_model_v2.pkl         # RF v2 model
+├── autoencoder_v2.pth         # AE v2 weights
+├── scaler_v2.pkl              # Feature scaler v2
+├── autoencoder_threshold_v2.pkl  # AE threshold v2
 └── requirements.txt       # Python dependencies
 
 ```
