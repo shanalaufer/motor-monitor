@@ -7,10 +7,10 @@ import numpy as np
 import pandas as pd
 from collections import deque
 from datetime import datetime
+import sqlite3
 
 app = FastAPI()
 
-# Allow dashboard to call this API
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -44,9 +44,52 @@ autoencoder = Autoencoder()
 autoencoder.load_state_dict(torch.load('autoencoder_v2.pth', weights_only=True))
 autoencoder.eval()
 
-# In-memory storage for latest reading and history
+# In-memory storage (unchanged)
 latest_reading = {}
 history = deque(maxlen=100)
+
+# --- SQLite setup ---
+DB_PATH = "motor_readings.db"
+
+def init_db():
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS readings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TEXT,
+            rf_health REAL,
+            rf_status TEXT,
+            ae_health REAL,
+            ae_status TEXT,
+            recon_error REAL,
+            rms REAL,
+            crest_factor REAL,
+            energy_100hz REAL
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+def insert_reading(r: dict):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute('''
+        INSERT INTO readings
+        (timestamp, rf_health, rf_status, ae_health, ae_status,
+         recon_error, rms, crest_factor, energy_100hz)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (
+        r['timestamp'], r['rf_health'], r['rf_status'],
+        r['ae_health'], r['ae_status'], r['recon_error'],
+        r['rms'], r['crest_factor'], r['energy_100hz']
+    ))
+    conn.commit()
+    conn.close()
+
+init_db()
+
+# --- Existing endpoints (unchanged) ---
 
 @app.get("/")
 def root():
@@ -97,6 +140,7 @@ def predict(data: dict):
 
     latest_reading.update(reading)
     history.append(reading)
+    insert_reading(reading)  # <-- persist to SQLite
 
     print(f"RF: {rf_status} {rf_health}% | AE: {ae_status} {ae_health}% | Error: {recon_error:.4f}")
 
