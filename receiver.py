@@ -16,6 +16,58 @@ model = joblib.load('motor_model.pkl')
 fs = 500
 burst_count = 0
 
+# ── Quality stats ────────────────────────────────────────────────────────────
+qc_total   = 0
+qc_passed  = 0
+qc_skipped = 0
+
+EXPECTED_BURST_LEN = 256
+
+
+def check_signal_quality(samples_x, samples_y, samples_z):
+    """
+    Run pre-pipeline signal quality checks on a 3-axis burst.
+    Returns {"ok": True, "reason": None} on pass, or
+            {"ok": False, "reason": "<description>"} on fail.
+    """
+    axes = {"x": samples_x, "y": samples_y, "z": samples_z}
+
+    # 1. Empty or too-short burst
+    for name, ax in axes.items():
+        if len(ax) < 64:
+            return {"ok": False, "reason": f"burst too short ({name}: {len(ax)} samples)"}
+
+    # 2. Flat signal / sensor disconnect (std < 0.001 on ALL three axes)
+    if all(np.std(ax) < 0.001 for ax in axes.values()):
+        return {"ok": False, "reason": "flat signal — possible sensor disconnect"}
+
+    # 3. Excessive noise (RMS > 20.0 on any axis)
+    for name, ax in axes.items():
+        rms = np.sqrt(np.mean(ax.astype(np.float64) ** 2))
+        if rms > 20.0:
+            return {"ok": False, "reason": f"excessive noise on {name} axis (RMS={rms:.2f})"}
+
+    # 4. Clipping (more than 5% of samples at max or min value)
+    for name, ax in axes.items():
+        lo, hi = ax.min(), ax.max()
+        clipped = np.sum((ax == lo) | (ax == hi))
+        if clipped / len(ax) > 0.05:
+            return {"ok": False, "reason": f"clipping on {name} axis ({clipped/len(ax)*100:.1f}% saturated)"}
+
+    # 5. NaNs or Infs
+    for name, ax in axes.items():
+        if not np.all(np.isfinite(ax)):
+            return {"ok": False, "reason": f"NaN or Inf values in {name} axis"}
+
+    # 6. Sampling instability — burst length deviates > 10% from expected 256
+    for name, ax in axes.items():
+        deviation = abs(len(ax) - EXPECTED_BURST_LEN) / EXPECTED_BURST_LEN
+        if deviation > 0.10:
+            return {"ok": False, "reason": f"burst length instability ({name}: {len(ax)} vs expected {EXPECTED_BURST_LEN})"}
+
+    return {"ok": True, "reason": None}
+
+
 def extract_features(signal):
     signal = np.array(signal)
     signal = signal - np.mean(signal)
@@ -78,10 +130,18 @@ while True:
                 samples_x = samples_y = samples_z
                 pwm_duty  = None
 
-            rms_check = np.sqrt(np.mean(samples_z**2))
-            if len(samples_z) == 0 or rms_check < 0.05:
-                print("Skipping low-energy burst")
+            # ── Signal quality check ─────────────────────────────────────────
+            qc_total += 1
+            qc = check_signal_quality(samples_x, samples_y, samples_z)
+            if not qc["ok"]:
+                qc_skipped += 1
+                skip_rate = qc_skipped / qc_total * 100
+                print(f"[QC] SKIP — {qc['reason']}")
+                print(f"[QC] passed={qc_passed} skipped={qc_skipped} skip_rate={skip_rate:.1f}%")
                 continue
+            qc_passed += 1
+            skip_rate = qc_skipped / qc_total * 100
+            print(f"[QC] passed={qc_passed} skipped={qc_skipped} skip_rate={skip_rate:.1f}%")
 
             features = extract_features(samples_z)  # Z axis drives existing pipeline
             features_df = pd.DataFrame([features])
