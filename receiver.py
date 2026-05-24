@@ -1,14 +1,33 @@
 import csv
+import logging
 import os
 import socket
 import json
 import threading
+from logging.handlers import RotatingFileHandler
+
 import numpy as np
 from scipy.fft import fft, fftfreq
 import joblib
 import pandas as pd
 import requests
 
+# ── Logging setup ────────────────────────────────────────────────────────────
+_LOG_FORMAT = "%(asctime)s [%(levelname)s] %(message)s"
+_formatter  = logging.Formatter(_LOG_FORMAT)
+
+_console_handler = logging.StreamHandler()
+_console_handler.setFormatter(_formatter)
+
+_file_handler = RotatingFileHandler("receiver.log", maxBytes=1_000_000, backupCount=3)
+_file_handler.setFormatter(_formatter)
+
+log = logging.getLogger("receiver")
+log.setLevel(logging.DEBUG)
+log.addHandler(_console_handler)
+log.addHandler(_file_handler)
+
+# ── Config ───────────────────────────────────────────────────────────────────
 LABEL = "healthy"  # "healthy" or "faulty"
 API_URL = "https://motor-fault-api-f7r8.onrender.com"
 
@@ -93,13 +112,15 @@ def _post_to_api(f):
     try:
         requests.post(f"{API_URL}/predict", json={'features': f}, timeout=5)
     except Exception as e:
-        print(f"API error: {e}")
+        log.warning(f"API error: {e}")
 
 server = socket.socket()
 server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 server.bind(('0.0.0.0', 5001))
 server.listen(5)
-print('Listening for ESP32 on port 5001...')
+log.info(f"API URL: {API_URL}")
+log.info("Listening for ESP32 on port 5001")
+log.info(f"Expected burst length: {EXPECTED_BURST_LEN} samples")
 
 while True:
     try:
@@ -136,12 +157,10 @@ while True:
             if not qc["ok"]:
                 qc_skipped += 1
                 skip_rate = qc_skipped / qc_total * 100
-                print(f"[QC] SKIP — {qc['reason']}")
-                print(f"[QC] passed={qc_passed} skipped={qc_skipped} skip_rate={skip_rate:.1f}%")
+                log.warning(f"QC SKIP — {qc['reason']} | passed={qc_passed} skipped={qc_skipped} skip_rate={skip_rate:.1f}%")
                 continue
             qc_passed += 1
             skip_rate = qc_skipped / qc_total * 100
-            print(f"[QC] passed={qc_passed} skipped={qc_skipped} skip_rate={skip_rate:.1f}%")
 
             features = extract_features(samples_z)  # Z axis drives existing pipeline
             features_df = pd.DataFrame([features])
@@ -149,7 +168,11 @@ while True:
             probability = model.predict_proba(features_df)[0][1]
             health_score = round((1 - probability) * 100, 1)
             status = "HEALTHY" if prediction == 0 else "FAULT DETECTED"
-            print(f"Status: {status} | Health: {health_score}% | RMS: {features['rms']:.3f} | E100Hz: {features['energy_100hz']:.3f}")
+            log.info(
+                f"Status: {status} | Health: {health_score}% | RMS: {features['rms']:.3f} "
+                f"| CF: {features['crest_factor']:.3f} "
+                f"| passed={qc_passed} skipped={qc_skipped} skip_rate={skip_rate:.1f}%"
+            )
 
             threading.Thread(target=_post_to_api, args=(features,), daemon=True).start()
 
@@ -178,7 +201,7 @@ while True:
             #     np.save(npy_path, burst[np.newaxis])  # shape (1, 3, N)
 
             burst_count += 1
-            print(f"Saved burst {burst_count} ({LABEL})")
+            log.info(f"Burst {burst_count} saved ({LABEL})")
 
     except Exception as e:
-        print('Error:', e)
+        log.error(f"Main loop error: {e}")
