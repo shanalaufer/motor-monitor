@@ -1,4 +1,6 @@
 from fastapi import FastAPI
+from fastapi.responses import StreamingResponse
+import io
 from fastapi.middleware.cors import CORSMiddleware
 import torch
 import torch.nn as nn
@@ -166,6 +168,20 @@ def get_stats():
         "first_reading": time_range[0],
         "last_reading": time_range[1]
     }
+
+@app.get("/export/csv")
+def export_csv():
+    conn = sqlite3.connect(DB_PATH)
+    df = pd.read_sql_query("SELECT * FROM readings ORDER BY timestamp DESC", conn)
+    conn.close()
+    stream = io.StringIO()
+    df.to_csv(stream, index=False)
+    stream.seek(0)
+    return StreamingResponse(
+        stream,
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=motor_readings.csv"}
+    )
 
 @app.post("/predict")
 def predict(data: dict):
