@@ -104,6 +104,14 @@ def get_health():
 @app.get("/history")
 def get_history():
     return list(history)
+@app.get("/db-check")
+def db_check():
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT COUNT(*) FROM readings")
+    count = c.fetchone()[0]
+    conn.close()
+    return {"rows_in_db": count}
 
 @app.post("/predict")
 def predict(data: dict):
