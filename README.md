@@ -69,7 +69,7 @@ After collecting more healthy data (48 → 106 samples) and retraining, the rati
 
 **Why the autoencoder matters for real deployment:** A Random Forest requires fault examples to train on — meaning you need to wait for something to break or deliberately damage equipment. The autoencoder only needs normal operation data, which every system already has from day one.
 
-## System architecture — FastAPI backend
+## API layer
 
 The system runs as three separate services communicating through a REST API:
 ESP32 → receiver.py → POST /predict → api.py → stores result
@@ -84,8 +84,12 @@ dashboard.py → GET /health every 2s → live display
 | `/health` | GET | Returns latest motor reading |
 | `/history` | GET | Returns last 100 readings |
 | `/predict` | POST | Accepts features, runs both models, returns results |
+| `/faults` | GET | Returns all fault detection events |
+| `/trends?hours=24` | GET | Average health scores over a time period |
+| `/stats` | GET | Total readings, fault counts, first/last reading time |
+| `/export/csv` | GET | Download full history as CSV |
 
-**How to run locally:**
+**How to run the system:**
 
 The API is deployed on Render at: https://motor-fault-api-f7r8.onrender.com
 
@@ -158,6 +162,7 @@ The sim-to-real gap is real. The simulation-trained model performed reasonably o
 | Edge firmware | MicroPython on ESP32 |
 | Sensor | MPU-6050 accelerometer over I2C |
 | Backend API | FastAPI |
+| Database | SQLite (via Render) |
 | Dashboard | Streamlit |
 | Deployment | Streamlit Cloud + Render |
 
@@ -209,19 +214,22 @@ motor-monitor/
 - ✅ 3-axis raw data collection (202 healthy + 95 faulty)
 - ✅ Butterworth bandpass filter + Welch PSD preprocessing
 - ✅ Retrained RF (96.7%) and AE (90.0%) on clean preprocessed data
-- KiCad custom PCB design (in progress)
+- ✅ KiCad custom PCB design
 
-### Phase 3 — Product-like system (planned)
-- ✅ Deploy FastAPI to cloud (Railway or Render)
+### Phase 3 — Product-like system (in progress)
+- ✅ Deploy FastAPI to cloud (Render)
 - ✅ Update public Streamlit URL to use hosted API
-- Database backend for historical trend monitoring
+- ✅ Database backend — every prediction persisted to `motor_readings.db` on Render
+- ✅ `GET /faults` — all fault detection events
+- ✅ `GET /trends?hours=24` — average health over a time period
+- ✅ `GET /stats` — total readings, fault counts, first/last reading time
+- ✅ `GET /export/csv` — download full history as CSV
+- ✅ Dashboard sidebar buttons to load stats, fault log, and 24hr trends
 - Multi-node support — monitor multiple motors simultaneously
 
 ### Phase 4 — Advanced engineering (future)
 - Multiple fault types — bearing defect, imbalance, misalignment
 - Multiclass classification
-- HDLBits Verilog practice
-- FPGA inference accelerator on Basys 3
 - LLM natural language interface via Anthropic API
 
 ---
