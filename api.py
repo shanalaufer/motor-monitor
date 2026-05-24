@@ -112,6 +112,60 @@ def db_check():
     count = c.fetchone()[0]
     conn.close()
     return {"rows_in_db": count}
+@app.get("/faults")
+def get_faults():
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("""
+        SELECT * FROM readings 
+        WHERE rf_status = 'FAULT DETECTED' OR ae_status = 'FAULT DETECTED'
+        ORDER BY timestamp DESC
+    """)
+    rows = c.fetchall()
+    conn.close()
+    columns = ['id', 'timestamp', 'rf_health', 'rf_status', 'ae_health',
+               'ae_status', 'recon_error', 'rms', 'crest_factor', 'energy_100hz']
+    return [dict(zip(columns, row)) for row in rows]
+
+@app.get("/trends")
+def get_trends(hours: int = 24):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("""
+        SELECT AVG(rf_health), AVG(ae_health), AVG(recon_error), COUNT(*)
+        FROM readings
+        WHERE timestamp >= datetime('now', '-' || ? || ' hours')
+    """, (hours,))
+    row = c.fetchone()
+    conn.close()
+    return {
+        "hours": hours,
+        "avg_rf_health": round(row[0], 1) if row[0] else None,
+        "avg_ae_health": round(row[1], 1) if row[1] else None,
+        "avg_recon_error": round(row[2], 4) if row[2] else None,
+        "total_readings": row[3]
+    }
+
+@app.get("/stats")
+def get_stats():
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT COUNT(*) FROM readings")
+    total = c.fetchone()[0]
+    c.execute("SELECT COUNT(*) FROM readings WHERE rf_status = 'FAULT DETECTED'")
+    rf_faults = c.fetchone()[0]
+    c.execute("SELECT COUNT(*) FROM readings WHERE ae_status = 'FAULT DETECTED'")
+    ae_faults = c.fetchone()[0]
+    c.execute("SELECT MIN(timestamp), MAX(timestamp) FROM readings")
+    time_range = c.fetchone()
+    conn.close()
+    return {
+        "total_readings": total,
+        "rf_fault_count": rf_faults,
+        "ae_fault_count": ae_faults,
+        "first_reading": time_range[0],
+        "last_reading": time_range[1]
+    }
 
 @app.post("/predict")
 def predict(data: dict):
