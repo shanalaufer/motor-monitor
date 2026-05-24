@@ -198,6 +198,38 @@ motor-monitor/
 ```
 ---
 
+## Testing & reliability
+
+The project includes a full automated test suite covering the live API, the preprocessing pipeline, and the ML models — 121 tests across three files. Tests run against the real deployed API on Render and against locally loaded model files, so they catch both integration regressions and model behaviour changes. All three suites pass cleanly and can be run independently or together.
+
+| Test file | Tests | Covers |
+|---|---|---|
+| `test_api.py` | 39 | All API endpoints — status codes, response shape, field validation, fault classification correctness, DB persistence, CSV export |
+| `test_preprocessor.py` | 49 | Raw data shape, DC removal, bandpass filter passband/stopband behaviour, axis selection, feature extraction correctness, CSV output |
+| `test_models.py` | 33 | Model loading, RF output format, accuracy regression, feature importance, autoencoder forward pass, reconstruction error ratio, scaler behaviour |
+
+**Signal quality monitoring**
+
+`receiver.py` validates every incoming burst across 6 checks before it reaches the feature extraction pipeline. A burst that fails any check is logged and discarded — it is never posted to the API. This prevents corrupted or disconnected-sensor data from polluting the database or triggering false fault alerts.
+
+- **Too short** — fewer than 64 samples on any axis
+- **Flat signal / sensor disconnect** — standard deviation below 0.001 on all three axes simultaneously
+- **Excessive noise** — RMS above 20.0 on any axis
+- **Clipping** — more than 5% of samples at the ADC's min or max value
+- **NaN or Inf** — any non-finite value anywhere in the burst
+- **Sampling instability** — burst length deviates more than 10% from the expected 256 samples
+
+**Structured logging**
+
+`receiver.py` logs every event to both stdout and a rotating log file (`receiver.log`) using Python's built-in `logging` module. Each line is timestamped with log level — `INFO` for normal operation, `WARNING` for QC skips and API errors, `ERROR` for main loop exceptions. The file handler rotates at 1MB and keeps 3 backups, so it never fills the disk on a long-running deployment.
+
+**Run all tests:**
+```bash
+pytest test_api.py test_preprocessor.py test_models.py -v
+```
+
+---
+
 ## Project roadmap
 
 ### Phase 1 — Proven prototype (complete)
