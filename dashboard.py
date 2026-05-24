@@ -162,8 +162,8 @@ if st.session_state.hist_trends is not None:
         st.sidebar.error(_d["error"])
     else:
         st.sidebar.markdown(
-            f"**Avg RF health:** {_d.get('avg_rf_health', 0):.1f}%  \n"
-            f"**Avg AE health:** {_d.get('avg_ae_health', 0):.1f}%  \n"
+            f"**Avg RF health:** {_d.get('avg_rf_health') or 0:.1f}%  \n"
+            f"**Avg AE health:** {_d.get('avg_ae_health') or 0:.1f}%  \n"
             f"**Readings (24 hr):** {_d.get('total_readings', '—')}"
         )
 
