@@ -100,6 +100,73 @@ if 'sim_mode' not in st.session_state:
 if mode == "Simulation":
     st.session_state.sim_mode = st.sidebar.radio("Motor mode", ["Healthy", "Faulty"])
 
+# ── Historical data ──────────────────────────────────────────────────────────
+st.sidebar.markdown("---")
+st.sidebar.header("Historical data")
+
+for _key in ("hist_stats", "hist_faults", "hist_trends"):
+    if _key not in st.session_state:
+        st.session_state[_key] = None
+
+# Stats
+if st.sidebar.button("📊 Load stats", key="btn_stats"):
+    try:
+        _r = requests.get(f"{API_URL}/stats", timeout=5)
+        st.session_state.hist_stats = _r.json() if _r.status_code == 200 else {"error": _r.text}
+    except Exception as _e:
+        st.session_state.hist_stats = {"error": str(_e)}
+
+if st.session_state.hist_stats is not None:
+    _d = st.session_state.hist_stats
+    if isinstance(_d, dict) and "error" in _d:
+        st.sidebar.error(_d["error"])
+    else:
+        st.sidebar.markdown(
+            f"**Total readings:** {_d.get('total_readings', '—')}  \n"
+            f"**RF faults:** {_d.get('rf_fault_count', '—')}  \n"
+            f"**AE faults:** {_d.get('ae_fault_count', '—')}  \n"
+            f"**First:** {_d.get('first_reading', '—')}  \n"
+            f"**Last:** {_d.get('last_reading', '—')}"
+        )
+
+# Fault log
+if st.sidebar.button("⚠️ Load fault log", key="btn_faults"):
+    try:
+        _r = requests.get(f"{API_URL}/faults", timeout=5)
+        st.session_state.hist_faults = _r.json() if _r.status_code == 200 else {"error": _r.text}
+    except Exception as _e:
+        st.session_state.hist_faults = {"error": str(_e)}
+
+if st.session_state.hist_faults is not None:
+    _d = st.session_state.hist_faults
+    if isinstance(_d, dict) and "error" in _d:
+        st.sidebar.error(_d["error"])
+    elif isinstance(_d, list):
+        if _d:
+            _cols = ["timestamp", "rf_health", "ae_health", "rf_status", "ae_status"]
+            st.sidebar.dataframe(pd.DataFrame(_d)[_cols], hide_index=True)
+        else:
+            st.sidebar.info("No faults on record.")
+
+# 24hr trends
+if st.sidebar.button("📈 Load 24hr trends", key="btn_trends"):
+    try:
+        _r = requests.get(f"{API_URL}/trends?hours=24", timeout=5)
+        st.session_state.hist_trends = _r.json() if _r.status_code == 200 else {"error": _r.text}
+    except Exception as _e:
+        st.session_state.hist_trends = {"error": str(_e)}
+
+if st.session_state.hist_trends is not None:
+    _d = st.session_state.hist_trends
+    if isinstance(_d, dict) and "error" in _d:
+        st.sidebar.error(_d["error"])
+    else:
+        st.sidebar.markdown(
+            f"**Avg RF health:** {_d.get('avg_rf_health', 0):.1f}%  \n"
+            f"**Avg AE health:** {_d.get('avg_ae_health', 0):.1f}%  \n"
+            f"**Readings (24 hr):** {_d.get('total_readings', '—')}"
+        )
+
 while run:
     reading = None
 
